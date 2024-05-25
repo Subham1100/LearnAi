@@ -2,10 +2,23 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pickle
 import pandas as pd
+import mysql.connector
+from mysql.connector import Error
 
 
 app = Flask(__name__)
 CORS(app)
+
+# database sql
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="YES",
+    database="LearnAiDatabase",
+    auth_plugin="mysql_native_password",
+)
+
+mycursor = db.cursor()
 
 
 # Load the DataFrame from a pickle file
@@ -45,8 +58,7 @@ def generate_follow_up_question(topic, subject, change, diff, df):
 
 
 def encoded_version(first_standard):
-    print("ok")
-    print(first_standard)
+
     # first_standard = pd.DataFrame(first_standard)
     questions = ""
     options = ""
@@ -95,7 +107,9 @@ def add_todo():
 @app.route("/submit", methods=["POST"])
 def result():
     data = request.json
-    print(data)
+    name = "user1"
+    age = 10
+    class_number = 1
     normalized_data = {
         "questions": list(data["questionsArray"]),
         "options": list(data["optionsArray"]),
@@ -107,27 +121,37 @@ def result():
     }
     response_data = pd.DataFrame(normalized_data)
     response_data["change"] = (
-        response_data["correctOptions"] == response_data["selectedAnswers"]
+        response_data["correctOptions"] == "(" + response_data["selectedAnswers"]
     )
     response_data["change"] = response_data["change"].astype(int)
-    print(data["selectedAnswers"])
-    print(response_data["selectedAnswers"])
+
     global df
     follow_up_questions = []
-    print(df.shape)
+
     for index, row in response_data.iterrows():
         topic = row["topics"]
         subject = row["subjects"]
+        diff = row["difficulty"]
+        print(row)
         change = "harder" if row["change"] == 1 else "easier"
         if change == "harder":
             df = df[df["Question"] != row["questions"]]
-            print("ok")
+
+        try:
+            mycursor.execute(
+                "INSERT INTO users_data (name, age, class_number, topic, subject,difficulty, ans) VALUES (%s, %s, %s, %s, %s, %s,%s)",
+                (name, age, class_number, topic, subject, diff, row["change"]),
+            )
+            db.commit()
+        except Error as e:
+            print(f"Error: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+
         follow_up_question = generate_follow_up_question(
             topic, subject, change, row["difficulty"], df
         )
         follow_up_questions.append(follow_up_question)
     follow_up_questions = pd.DataFrame(follow_up_questions)
-    print(df.shape)
     questions, options, c_option, subject, topic, difficulty = encoded_version(
         follow_up_questions
     )
@@ -144,6 +168,12 @@ def result():
         ),
         200,
     )
+
+
+@app.route("/analysis", methods=["POST"])
+def analysis():
+
+    return (jsonify("heylosl"), 200)
 
 
 if __name__ == "__main__":

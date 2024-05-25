@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { Home, ResponsePage } from "./components";
+import { Analysis, Home, ResponsePage } from "./components";
 import Result from "./components/result";
 
 function App() {
@@ -10,6 +10,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/ResponsePage" element={<ResponsePage />} />
           <Route path="/Result" element={<Result />} />
+          <Route path="/Analysis" element={<Analysis />} />
         </Routes>
       </Router>
     </div>
